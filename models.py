@@ -5,10 +5,16 @@
 # - Menu: stores and manages a collection of menu items
 # - Order: stores selected items and calculates totals
 
+# ByteBites backend models
+# Week 8 update:
+# Added a lightweight recommendation feature so the system can
+# suggest menu items based on category preferences and popularity.
+
 
 class Customer:
-    def __init__(self, name: str):
+    def __init__(self, name: str, favorite_category: str | None = None):
         self.name = name
+        self.favorite_category = favorite_category
         self.purchase_history = []
 
     def add_purchase(self, order):
@@ -35,6 +41,39 @@ class Menu:
 
     def sort_by_popularity(self, descending: bool = True):
         return sorted(self.items, key=lambda item: item.popularity_rating, reverse=descending)
+
+    def recommend_items(self, preferred_category: str, min_popularity: int = 0, top_k: int = 3):
+        """
+        Returns top menu recommendations based on:
+        - matching the preferred category
+        - popularity rating
+        - lower price as a small tie-breaker
+
+        This is a simple recommendation layer, not a full ML system.
+        """
+        scored_items = []
+
+        for item in self.items:
+            score = 0
+
+            if item.category.lower() == preferred_category.lower():
+                score += 5
+
+            score += item.popularity_rating
+
+            if item.popularity_rating >= min_popularity:
+                scored_items.append((score, item))
+
+        scored_items.sort(key=lambda pair: (-pair[0], pair[1].price, pair[1].name))
+        return [item for _, item in scored_items[:top_k]]
+
+    def recommend_for_customer(self, customer, min_popularity: int = 0, top_k: int = 3):
+        """
+        Recommends items using the customer's saved favorite category.
+        """
+        if not customer.favorite_category:
+            return []
+        return self.recommend_items(customer.favorite_category, min_popularity, top_k)
 
 
 class Order:
